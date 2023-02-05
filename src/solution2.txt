@@ -1,0 +1,1 @@
+[[['MOVE','NO_COLOR'],['RIGHT','RED'],['LEFT','GREEN'],['CALL_1','NO_COLOR']]];

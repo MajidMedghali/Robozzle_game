@@ -1,0 +1,23 @@
+mport {puzzleTab,getId,getTitle,getNumstars,getRobotPos,getColorInPos,starInPos,NumInstruction,getPuzzleFrmId,getPuzzleFrmName,getSolFrmId,solTab} from './puzzles';
+
+
+
+
+describe('test_all_functions', () => {
+   test('the function return the first puzzle', () => {
+        expect(getPuzzleFrmId(1,puzzleTab).id).toBe(1);
+        expect(getPuzzleFrmId(1,puzzleTab).stars).toBe(1);
+        expect(getPuzzleFrmId(1,puzzleTab).robotCol).toBe(3);
+        expect(getPuzzleFrmId(1,puzzleTab).robotDir).toBe(0);
+        expect(getPuzzleFrmId(10,puzzleTab).id).toBe(1);
+        
+    });
+    test('test getPuzzleFrmName', () => {
+        let puzzle=getPuzzleFrmName("ssh");
+        expect(puzzle.id).toBe(4);
+        expect(puzzle.robotDir).toBe(2);
+        expect(getPuzzleFrmName("NoPuzzle")).toBe(0);
+    });
+   
+
+});

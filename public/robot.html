@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Robot Programming Visualizer</title>
+    <style>
+      body {
+    	  background-color: #404040;
+    	  color: #eee;
+    	  font-family: Helvetica, Arial;
+      }
+      div#visualizer {
+          font: 25px/25px Arial;
+          width: 680px; height: 720px;
+          background: #333;
+          margin: auto;
+      }
+      #visualizer table {
+          border-collapse: collapse;
+          margin: auto;
+      }
+      #visualizer_board td {
+          width: 40px; height: 40px;
+	  text-align: center;
+          padding: 0px;
+          font-family: 'robots';
+          font-size:24px;
+      }
+      #visualizer_board td.red_tile {
+          border: 1px solid gray;
+          background: linear-gradient(to top left, #ff0000, #993333);
+      }
+      #visualizer_board td.green_tile {
+          border: 1px solid gray;
+          background: linear-gradient(to top left, #00aa44, #337733);
+      }
+      #visualizer_board td.blue_tile {
+          border: 1px solid gray;
+          background: linear-gradient(to top left, #0044ff, #333399);
+      }
+      #visualizer_buttons {
+	  text-align: center;
+      }
+      @font-face {
+          font-family: 'robots';
+          src: url('./robot.ttf') format('truetype');
+      }
+    </style>
+  </head>
+  <body>
+    <label for="Puzzle-select"> Choose a puzzle:</label>
+    <select id="choices" size="1">
+      <option value="1" selected="selected">puzzle1</option>
+      <option value="2">puzzle2</option>
+      <option value="3">puzzle3</option>
+      <option value="4">ssh</option>
+      <option value="330">Learning Stack</option>
+      <option value="644">Right On Red</option>
+      <option value="571">Bumbling Bee</option>
+      <option value="17">The star-studded path I</option>
+
+    </select>
+
+      <label for="vol">Speed of your Robot:</label>
+      <input type="range" id="vol" name="vol" min="10" max="100">
+      <button id="GO">GO...</button>
+    
+    <p id="demo"></p>
+    <p id="name" style="font-size: 35px; ">Puzzle : </p>
+
+    <div id="visualizer" style="width: 1000px;height: 950px"; >
+	
+      <table>
+	<p id="stars" style="font-size: 25px; "></p>
+	<p id="lol1"></p>
+	<p id="lol10"></p>
+        <tbody id="visualizer_board" style="background-color:grey; border:30px">
+
+        </tbody>
+      </table>
+      <div id="visualizer_buttons">
+	<br>
+	<br>
+	<br>
+	<button id="button_move">Play !</button>
+	<button id="stop">Stop !</button>
+	<button id="play">Next !</button><br>
+	<p id="lol2"></p>
+	<p id="demo1" ></p>
+      </div>
+    </div>
+    
+  </body>
+  <script type="module">
+    import {solTab,puzzleTab,getId,getTitle,getNumstars,getRobotPos,getColorInPos,starInPos,NumInstruction,getPuzzleFrmId,getSolFrmId,number_puzzles} from '../src/puzzles.js';
+    import {moveRobot,gameOver} from "../src/game.js";
+    import {verifyProgram} from "../src/verify.js";
+    import fs from'fs';
+    
+    // 'robots.ttf' defines 16 ad-hoc icons, using codes from \uEE00 to \uEE0F :
+    // 0 = robot pointing east, 1 = robot pointing south, 2 = robot pointing west,
+    // 3 = robot pointing north, 4 = star, 5 = disk, 6 = box, 7 = flash,
+    // 8 = heart, 9 = broken heart, A = lock, B = open lock, C = key,
+    // D = droplet, E = rocket, F = empty
+
+
+    const icons = {
+        robotEast:   { string: '\uEE00', color: 'pink' },
+        robotSouth:  { string: '\uEE03', color: 'pink' },
+        robotWest:   { string: '\uEE02', color: 'pink' },
+        robotNorth:  { string: '\uEE01', color: 'pink' },
+        star:        { string: '\uEE04', color: 'yellow' },
+        disk:        { string: '\uEE05', color: 'red' },
+        box:         { string: '\uEE06', color: 'red' },
+        flash:       { string: '\uEE07', color: 'red' },
+        heart:       { string: '\uEE08', color: 'red' },
+        heartBroken: { string: '\uEE09', color: 'red' },
+        lock:        { string: '\uEE0A', color: 'red' },
+        lockOpen:    { string: '\uEE0B', color: 'red' },
+        key:         { string: '\uEE0C', color: 'red' },
+        droplet:     { string: '\uEE0D', color: 'red' },
+        rocket:      { string: '\uEE0E', color: 'red' },
+        empty:       { string: '\uEE0F', color: 'red' },
+    };
+
+    let Id=parseInt(document.getElementById("choices").options[document.getElementById("choices").selectedIndex].value);
+    
+ 
+    function removeRobot() {
+	const rCell = document.getElementById(robotID);
+        rCell.removeAttribute('id');
+        rCell.removeAttribute('style');
+	rCell.innerText = icons.empty.string;
+    }
+
+    function addRobot(aBoardID, aRobot) {
+        let aBoard = document.getElementById(aBoardID)
+        let aCell  = aBoard.rows[aRobot.y].cells[aRobot.x];
+        let anIcon = icons[Object.keys(icons)[aRobot.dir]];
+        aCell.id = robotID;
+        aCell.innerText = anIcon.string;
+        aCell.style.color = anIcon.color;
+	
+    }
+    function updateColors(aPuzzle){
+	let aBoard = document.getElementById(aBoardID);
+	aPuzzle.board.forEach((aLine,i)=>{
+	    aLine.split('').forEach((aChar,j) => {
+                let rCell = aBoard.rows[i].cells[j];
+                switch (aPuzzle.board[i][j]) {
+                case 'r': rCell.className = " red_tile"; break;
+                case 'g': rCell.className = " green_tile"; break;
+                case 'b': rCell.className = " blue_tile"; break;
+                case 'R': rCell.className = " red_tile"; addStar(rCell);break;
+                case 'G': rCell.className = " green_tile";addStar(rCell); break;
+                case 'B': rCell.className = " blue_tile";addStar(rCell); break;
+                }
+	    });
+	});
+	
+    }
+
+    function addStar(aCell) {
+	aCell.innerText = icons.star.string;
+        aCell.style.color = icons.star.color;
+    }
+
+    function fillBoard(aBoardID, aPuzzle) {
+        const tbody = document.getElementById(aBoardID);
+        aPuzzle.board.forEach((aLine) => {
+            const newRow = tbody.insertRow();
+            aLine.split('').forEach((aChar) => {
+                const newCell = newRow.insertCell();
+                switch (aChar) {
+                case 'r': newCell.className += " red_tile"; break;
+                case 'g': newCell.className += " green_tile"; break;
+                case 'b': newCell.className += " blue_tile"; break;
+                case 'R': newCell.className += " red_tile"; addStar(newCell); break;
+                case 'G': newCell.className += " green_tile"; addStar(newCell); break;
+                case 'B': newCell.className += " blue_tile"; addStar(newCell); break;
+                }
+            });
+        });
+    }
+
+    //display the puzzle in mode HTML
+    function html( C){
+	updateColors(C["puzzle"]);
+	removeRobot();
+	addRobot(aBoardID,
+		 { x: C["puzzle"].robotCol, y: C["puzzle"].robotRow, dir: C["puzzle"].robotDir });
+	C["num"]++;
+    }
+
+
+    function initializeContext(puzzle,prog){
+	let puzzlecopy={
+	    ...puzzle,
+	};
+	let context = {"puzzle":puzzlecopy,"prog":prog,"stack":[[0,0]],"pc":[0,0],"num":0, "error":"NONE"};
+	return context;
+    }
+
+    function numFunc(C){
+	let x=0;
+	while(C["puzzle"].subs[x]!==0){
+	    x=x+1;
+	    
+	}
+	return x;
+    }
+    
+    function inputSol(C){
+	const aba = document.getElementById("button_move");
+	let parent = document.getElementById("button_move").parentNode;
+	function addOption(text,value,input){
+	    const opt = document.createElement("option");
+	    opt.text=text;
+	    opt.value=value;
+	    input.add(opt,null);
+	}
+
+	
+       
+	C["puzzle"].subs.forEach((el,i)=>{
+	    if(el!=0){
+		const pp = document.createElement("text");
+		pp.setAttribute("type", "text");
+		pp.innerHTML="F"+(i+1)+" " ;
+		parent.insertBefore(pp,aba);
+		for(let j=0;j<el;j++){
+		    const input3 = document.createElement("input");
+		    input3.style="background:black";
+		    input3.disabled="true";
+		    input3.style.width="2px";
+		    parent.insertBefore(input3,aba);
+		    /////////////////
+		    numId=(i+1)*100+((j+1)*10)
+		    const input1 = document.createElement("select");
+		    const input2 = document.createElement("select");
+		    input1.id=(numId+1).toString();
+		    input1.style.width="70px";
+		    parent.insertBefore(input1,aba);
+		    addOption("","NONE",input1);
+		    addOption("FORWARD","MOVE",input1);
+		    addOption("LEFT","LEFT",input1);
+		    addOption("RIGHT","RIGHT",input1);
+		    addOption("PAINTRED","TURNRED",input1);
+		    addOption("PAINTBLUE","TURNBLUE",input1);
+		    addOption("PAINTGREEN","TURNGREEN",input1);
+		    for(let i=0;i<numFunc(C);i++){
+			addOption(("F"+(i+1).toString()),("CALL_"+(i+1).toString()),input1)
+		    }
+		    //
+		    input2.id=(numId+2).toString();
+		    input2.style.width="70px";
+		    addOption("","NONE",input2);
+		    addOption("ALL","NO_COLOR",input2);
+		    addOption("GREEN","GREEN",input2);
+		    addOption("BLUE","BLUE",input2);
+		    addOption("RED","RED",input2);
+		    parent.insertBefore(input2,aba);
+		}
+		const input = document.createElement("p");
+		parent.insertBefore(input,aba);
+		
+	    }});
+    }
+
+
+    function addButton(id,context){
+	document.getElementById("button_move").innerHTML="Try again !";
+	document.getElementById("button_move").addEventListener("click",function(){
+	    window.location.reload(false);	    
+	});
+    }
+
+    function getSol(context){
+
+	let array=[];
+	let i=0;
+	let numId=0;
+	let numId2=0;
+	let miniarray=[];
+	while(context["puzzle"].subs[i]!=0){
+	    let z=0;
+	    miniarray=[];
+	    for(let j=0;j<context["puzzle"].subs[i];j++){
+		numId1=(i+1)*100+((j+1)*10) + 1;
+		numId2=(i+1)*100+((j+1)*10) + 2;
+		document.getElementById(numId.toString());
+		let at =document.getElementById(numId1.toString()).options[document.getElementById(numId1.toString()).selectedIndex].value;
+		let bt =document.getElementById(numId2.toString()).options[document.getElementById(numId2.toString()).selectedIndex].value;
+		if(!(at === "NONE" || bt ==="NONE")){
+		    miniarray[z]=[ at,bt ];
+		    z++;
+		}
+		
+		
+	    }
+	    
+	    array[i]=miniarray;
+	    i=i+1;
+	    
+	}
+	return [array,array[0].length];
+    }
+    
+    const robotID = "robot";  
+    let aBoardID = "visualizer_board";
+    
+    window.onload = () => {
+	let aPuzzle = getPuzzleFrmId(Id,puzzleTab);
+	let context = initializeContext(aPuzzle,'');
+	inputSol(context);
+        fillBoard(aBoardID, context["puzzle"]);
+	addRobot(aBoardID,{ x: context["puzzle"].robotCol, y: context["puzzle"].robotRow, dir: context["puzzle"].robotDir });
+	document.getElementById("name").innerHTML ="Puzzle : " + context["puzzle"].title;
+	document.getElementById("stars").innerHTML ="Stars : " + context["puzzle"].stars;	
+	document.getElementById("GO").addEventListener("click", () =>{ window.location.reload(false);});
+	document.getElementById("button_move").addEventListener("click",function(){
+	    
+	    context = initializeContext(aPuzzle,getSol(context)[0]);
+	    if(getSol(context)[1]===0){
+		document.getElementById("demo1").innerHTML ="PLEASE INSERT INSTRUCTIONS IN F1" ;
+		addButton("lol2",context);
+	    }
+	    else{
+	    
+	    let a=setInterval(function(){
+		document.getElementById("lol1").innerHTML = context["prog"][context["pc"][0]][context["pc"][1]]
+		if (context["puzzle"].stars===0){
+		    clearInterval(a);
+		    addButton("lol2",context);
+		    document.getElementById("demo1").innerHTML = "YOU WIN &#128579";}
+		else if(context["num"] === 1000 ||  gameOver(context)){
+		    clearInterval(a);
+		    addButton("lol2",context);
+		    document.getElementById("demo1").innerHTML = "GAME OVER &#128580";
+		}
+		moveRobot(context,html);
+		if (context["puzzle"].stars===0){
+		    clearInterval(a);
+		    addButton("lol2",context);
+		    document.getElementById("demo1").innerHTML = "YOU WIN &#128579";}
+		else if(context["num"] === 1000 ||  gameOver(context)){
+		    clearInterval(a);
+		    addButton("lol2",context);
+		    document.getElementById("demo1").innerHTML = "GAME OVER &#128580"+context["error"];
+		}  
+		
+		document.getElementById("stars").innerHTML ="Stars : " + context["puzzle"].stars;
+
+		
+		
+	    },(110-document.getElementById("vol").value) * 10);
+	    
+	    document.getElementById("stop").addEventListener("click", function(){addButton("lol2",array,context);
+										 clearInterval(a);
+										});}
+	    
+        });
+
+	document.getElementById("play").addEventListener("click",()=> {moveRobot(context,html);
+								       document.getElementById("lol1").innerHTML = context["prog"][context["pc"][0]][context["pc"][1]];
+								      }
+							);	
+	
+							       };
+    
+  </script>
+</html>
